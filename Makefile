@@ -17,11 +17,14 @@ ARCHITECTURE ?= all
 # Convenience variable for the built .deb (lives one dir up when using dpkg-buildpackage)
 DEB_GLOB := ../$(PACKAGE_NAME)_*.deb
 
-.PHONY: help all build upload clean distclean release print-deb
+.PHONY: help all build upload clean distclean release print-deb build-wheel install-pipx install-local
 
 help:
 	@echo "Targets:"
 	@echo "  make build           - Build Debian package (.deb)"
+	@echo "  make build-wheel     - Build Python wheel for pip/pipx installation"
+	@echo "  make install-local   - Install locally in development mode (pip install -e .)"
+	@echo "  make install-pipx    - Install using pipx (recommended for CLI tools)"
 	@echo "  make clean           - Remove staged packaging artifacts inside debian/"
 	@echo "  make distclean       - Clean and remove built files in parent dir"
 	@echo "  make print-deb       - Print the path to the built .deb (expects exactly one)"
@@ -52,3 +55,28 @@ clean:
 distclean: clean
 	@echo "Removing built artifacts in parent directory (if any)..."
 	rm -f ../$(PACKAGE_NAME)_*.deb ../$(PACKAGE_NAME)_*.buildinfo ../$(PACKAGE_NAME)_*.changes
+	@echo "Removing Python build artifacts..."
+	rm -rf build/ dist/ *.egg-info src/*.egg-info
+
+build-wheel:
+	@echo "Building Python wheel package..."
+	python3 -m pip install --upgrade build
+	python3 -m build --wheel
+	@echo "Wheel built successfully in dist/"
+	@ls -lh dist/*.whl
+
+install-local:
+	@echo "Installing in development mode..."
+	pip3 install -e .
+	@echo "Development installation complete. Changes to source code will be reflected immediately."
+
+install-pipx:
+	@echo "Installing with pipx (isolated environment for CLI tools)..."
+	@if ! command -v pipx &> /dev/null; then \
+		echo "pipx not found. Installing pipx..."; \
+		python3 -m pip install --user pipx; \
+		python3 -m pipx ensurepath; \
+		echo "Please restart your shell or run: source ~/.bashrc"; \
+	fi
+	pipx install .
+	@echo "Installation complete! You can now run: isaac-ros --help"
